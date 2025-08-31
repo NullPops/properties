@@ -37,7 +37,7 @@ open class Configuration(val name: String? = null) {
     /**
      * Optional explicit add if you instantiate items without the primary ctor.
      * (Normally unnecessary—[ConfigurationItem] registers itself with both this [Configuration]
-     * and [PropertiesManager] in its init block.)
+     * and [Properties] in its init block.)
      */
     fun add(item: ConfigurationItem<*>) = addInternal(item)
 }
@@ -46,10 +46,10 @@ open class Configuration(val name: String? = null) {
  * A single configuration entry.
  *
  * - Strings are stored raw; other types are JSON (matching ConfigManager behavior).
- * - Automatically registers with [PropertiesManager] and its owning [Configuration] on creation.
+ * - Automatically registers with [Properties] and its owning [Configuration] on creation.
  */
 class ConfigurationItem<T>(
-    configuration: Configuration,
+    val configuration: Configuration,
     val name: String,               // Display label
     val key: String,                // Stable storage key
     val defaultValue: T,
@@ -59,30 +59,30 @@ class ConfigurationItem<T>(
 ) {
     init {
         // Register globally and attach to owning config (enforces unique keys there)
-        PropertiesManager.register(this)
+        Properties.register(this)
         configuration.addInternal(this)
 
         if (reset)
-            PropertiesManager.unset(key)
+            Properties.unset(key)
     }
 
     /** Get current value as String (raw if String, JSON otherwise). */
-    fun getStringValue(): String = PropertiesManager.getString(key, defaultValue.toString())
+    fun getStringValue(): String = Properties.getString(key, defaultValue.toString())
 
     /**
      * Typed getter. Must be called with the correct type parameter for this item:
      * `val enabled = myItem.get<Boolean>()`
      */
     inline fun <reified R> get(): R =
-        PropertiesManager.get(key, defaultValue as R)
+        Properties.get(key, defaultValue as R)
 
     /** Typed setter. Persists immediately by default. */
     fun set(value: T, saveNow: Boolean = true) {
-        PropertiesManager.set(key, value, saveNow)
+        Properties.set(key, value, saveNow)
     }
 
     fun unset() {
-        PropertiesManager.unset(key)
+        Properties.unset(key)
     }
 
     /** Convenience: toggle only for boolean items. */
@@ -90,12 +90,16 @@ class ConfigurationItem<T>(
         require(defaultValue is Boolean) {
             "toggle() only valid for Boolean config items (key='$key')"
         }
-        val current = PropertiesManager.get<Boolean>(key, defaultValue)
-        PropertiesManager.set(key, !current)
+        val current = Properties.get<Boolean>(key, defaultValue)
+        Properties.set(key, !current)
     }
 
     override fun toString(): String {
         val masked = if (secret) "********" else getStringValue()
         return "ConfigItem(name='$name', key='$key', value=$masked)"
+    }
+
+    fun String.key(): String {
+        return "${configuration.name}.$this"
     }
 }

@@ -26,10 +26,10 @@ import kotlin.concurrent.write
  * NOTE: We intentionally keep values as Strings to remain compatible with the
  * previous behavior where raw Strings are stored as-is, and non-Strings are JSON.
  */
-class Properties : ConcurrentHashMap<String, String>()
+class PropertiesMap : ConcurrentHashMap<String, String>()
 
 /**
- * Drop-in PropertiesManager with:
+ * Drop-in Properties with:
  * - Safe, explicit configuration of the directory (no lateinit trap).
  * - Atomic save (write to .tmp then move).
  * - Thread-safety via RW lock + concurrent map.
@@ -37,7 +37,7 @@ class Properties : ConcurrentHashMap<String, String>()
  *
  * Default location (if you don't call [configure]): {user.home}/.config/nullpops/
  */
-object PropertiesManager {
+object Properties {
     // ---- Public surface -----------------------------------------------------
 
     /** Pretty-printing JSON for human-diffable files. */
@@ -129,7 +129,7 @@ object PropertiesManager {
 
     // Mutable state guarded by lock
     val lock = ReentrantReadWriteLock()
-    val properties: Properties = Properties()
+    val properties: PropertiesMap = PropertiesMap()
     val configurationItems = ArrayList<ConfigurationItem<*>>()
 
     @Volatile private var initialized = false
@@ -166,8 +166,8 @@ object PropertiesManager {
             Files.newBufferedReader(target, UTF_8).use { reader: BufferedReader ->
                 properties.clear()
                 @Suppress("UNCHECKED_CAST")
-                val loaded: Properties = gson.fromJson(reader, Properties::class.java)
-                    ?: Properties()
+                val loaded: PropertiesMap = gson.fromJson(reader, PropertiesMap::class.java)
+                    ?: PropertiesMap()
                 properties.putAll(loaded)
             }
             val ms = Duration.between(start, Instant.now()).toMillis()
@@ -212,9 +212,9 @@ object PropertiesManager {
 /* -------------------------- Helpers --------------------------- */
 
 /** Syntactic sugar: config["foo", "bar"] */
-operator fun<T> PropertiesManager.get(key: String, default: String): String =
+operator fun<T> Properties.get(key: String, default: String): String =
     get<T>(key, default)
 
 /** Syntactic sugar: config["foo"] = 42 */
-operator fun <T> PropertiesManager.set(key: String, value: T) =
+operator fun <T> Properties.set(key: String, value: T) =
     set(key, value, saveNow = true)

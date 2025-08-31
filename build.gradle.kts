@@ -10,7 +10,7 @@ plugins {
 }
 
 group = "io.github.nullpops"
-version = "1.0.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()
@@ -23,15 +23,20 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+kotlin {
+    jvmToolchain(23)
+}
+
 tasks.test {
     useJUnitPlatform()
     outputs.upToDateWhen { false }
     outputs.cacheIf { false }
 }
-kotlin {
-    jvmToolchain(23)
-}
-
 
 tasks.withType<JReleaserDeployTask> {
     dependsOn("publish")
